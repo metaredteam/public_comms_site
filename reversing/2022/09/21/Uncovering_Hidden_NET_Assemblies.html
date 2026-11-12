@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="google-translate-customization" content="108d9124921d80c3-80e20d618ff053c8-g4f02ec6f3dba68b7-c"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Uncovering Hidden .NET Assemblies | Meta Red Team X</title>
+<meta name="generator" content="Jekyll v3.9.5" />
+<meta property="og:title" content="Uncovering Hidden .NET Assemblies" />
+<meta name="author" content="Michael Henry, Red Team X" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Technical writeups by Meta’s Security folks, including Red Team." />
+<meta property="og:description" content="Technical writeups by Meta’s Security folks, including Red Team." />
+<link rel="canonical" href="https://metaredteam.github.io/public_comms_site/reversing/2022/09/21/Uncovering_Hidden_NET_Assemblies.html" />
+<meta property="og:url" content="https://metaredteam.github.io/public_comms_site/reversing/2022/09/21/Uncovering_Hidden_NET_Assemblies.html" />
+<meta property="og:site_name" content="Meta Red Team X" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2022-09-21T00:00:00-05:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Uncovering Hidden .NET Assemblies" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Michael Henry, Red Team X"},"dateModified":"2022-09-21T00:00:00-05:00","datePublished":"2022-09-21T00:00:00-05:00","description":"Technical writeups by Meta’s Security folks, including Red Team.","headline":"Uncovering Hidden .NET Assemblies","mainEntityOfPage":{"@type":"WebPage","@id":"https://metaredteam.github.io/public_comms_site/reversing/2022/09/21/Uncovering_Hidden_NET_Assemblies.html"},"url":"https://metaredteam.github.io/public_comms_site/reversing/2022/09/21/Uncovering_Hidden_NET_Assemblies.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="icon" href="">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/typeface-noto-sans@0.0.72/index.min.css">
+  <link rel="stylesheet" href="/public_comms_site/assets/css/main.css">
+  <script src="/public_comms_site/assets/js/main.js"></script><link type="application/atom+xml" rel="alternate" href="https://metaredteam.github.io/public_comms_site/feed.xml" title="Meta Red Team X" /><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/default.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js"></script>
+<!-- and it's easy to individually load additional languages -->
+<script charset="UTF-8"
+        src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/languages/go.min.js"
+        async></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script>
+// Init highlight js
+document.addEventListener('DOMContentLoaded', function(event) {
+  var els = document.querySelectorAll('pre code')
+
+  function addLangData(block) {
+    var outer = block.parentElement.parentElement.parentElement;
+    var lang = block.getAttribute('data-lang');
+    for (var i = 0; i < outer.classList.length; i++) {
+      var cls = outer.classList[i];
+      if (cls.startsWith('language-')) {
+        lang = cls;
+        break;
+      }
+    }
+    if (!lang) {
+      cls = block.getAttribute('class');
+      lang = cls ? cls.replace('hljs ', '') : '';
+    }
+    if (lang.startsWith('language-')) {
+      lang = lang.substr(9);
+    }
+    block.setAttribute('class', 'hljs ' + lang);
+    block.parentNode.setAttribute('data-lang', lang);
+  }
+
+  function addBadge(block) {
+    var enabled = ('true' || 'true').toLowerCase();
+    if (enabled == 'true') {
+      var pre = block.parentElement;
+      pre.classList.add('badge');
+    }
+  }
+
+  function handle(block) {
+    addLangData(block);
+    addBadge(block)
+    hljs.highlightBlock(block);
+  }
+
+  for (var i = 0; i < els.length; i++) {
+    var el = els[i];
+    handle(el);
+  }
+});
+</script>
+
+<style>
+  /* code language badge */
+  pre.badge::before {
+    content: attr(data-lang);
+    color: #fff;
+    background-color: #ff4e00;
+    padding: 0 .5em;
+    border-radius: 0 2px;
+    text-transform: uppercase;
+    text-align: center;
+    min-width: 32px;
+    display: inline-block;
+    position: absolute;
+    right: 0;
+  }
+
+  /* fix wrong badge display for firefox browser */
+  code > table pre::before {
+    display: none;
+  }
+</style>
+<script
+  src="//cdnjs.cloudflare.com/ajax/libs/photoswipe/5.3.7/umd/photoswipe-lightbox.umd.min.js" async></script>
+<script
+  src="//cdnjs.cloudflare.com/ajax/libs/photoswipe/5.3.7/umd/photoswipe.umd.min.js" async></script>
+<link
+  href="//cdnjs.cloudflare.com/ajax/libs/photoswipe/5.3.7/photoswipe.min.css"
+  rel="stylesheet"
+/>
+<style>
+  .pswp .pswp__container .pswp__img {
+    background-color: white;
+  }
+</style>
+
+<script>
+  function initPhotoSwipe() {
+    let customOptions = {};
+
+    try {
+      const data = ``.replaceAll("=>", ":");
+      customOptions = JSON.parse(data);
+    } catch (e) {
+      console.info("Invalid custom photo previewer options! " + e.message);
+    }
+
+    // Define object and gallery options
+    const options = Object.assign(
+      {
+        gallery: "section.main",
+        children: "a.photo-swipe",
+        photo_scale: 2,
+        // dynamic import is not supported in UMD version
+        pswpModule: PhotoSwipe,
+      },
+      customOptions
+    );
+
+    const galleryEl = document.querySelector(options.gallery);
+    if (!galleryEl) {
+      return;
+    }
+
+    const imgEls = [];
+    const els = galleryEl.querySelectorAll("img:not(.emoji)");
+    els.forEach((el) => {
+      if (el.src.trim() == "") {
+        return;
+      }
+      if (!imgEls.includes(el)) {
+        imgEls.push(el);
+      }
+    });
+
+    if (imgEls.length === 0) {
+      return;
+    }
+
+    imgEls.forEach((imgEl) => {
+      imgEl.outerHTML = `
+      <a class="photo-swipe"
+        href="${imgEl.src}"
+        data-pswp-width="${
+          Math.max(imgEl.naturalWidth, imgEl.width) * options.photo_scale
+        }"
+        data-pswp-height="${
+          Math.max(imgEl.naturalHeight, imgEl.height) * options.photo_scale
+        }"
+        data-pswp-caption="${imgEl.getAttribute("caption") || imgEl.alt}"
+        target="_blank">
+        ${imgEl.outerHTML}
+      </a>`;
+    });
+
+    // Initialize PhotoSwipe 5
+    var lightbox = new PhotoSwipeLightbox(options);
+
+    lightbox.init();
+  }
+
+  window.addEventListener("load", initPhotoSwipe);
+</script>
+  <link rel="stylesheet" href="/public_comms_site/assets/css/rtx.css">
+</head>
+<body>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<header class="site-header " role="banner">
+
+  <div class="wrapper">
+    <div class="site-header-inner"><span class="site-brand"><a class="site-brand-inner" rel="author" href="/public_comms_site/">
+  <img class="site-favicon" title="Meta Red Team X" src="" onerror="this.style.display='none'">
+  Meta Red Team X
+</a>
+</span><nav class="site-nav">
+          <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+          <label for="nav-trigger">
+            <span class="menu-icon">
+              <svg viewBox="0 0 18 15" width="18px" height="15px">
+                <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+              </svg>
+            </span>
+          </label>
+
+          <div class="trigger"><a class="page-link" href="/public_comms_site/bugs.html">BUGS</a><a class="page-link" href="/public_comms_site/about.html">ABOUT</a><a class="page-link" href="/public_comms_site/">HOME</a>
+
+
+
+
+</div>
+        </nav></div>
+  </div>
+</header>
+
+<script>
+  function initHeader() {
+    var lastScrollY = getScrollPos().y;
+    var documentElement = document.documentElement;
+
+    function storeScrollData() {
+      var y = getScrollPos().y;var scrollStatus = "";
+
+      if (y <= 0) {
+        scrollStatus = "top";
+      } else if ((window.innerHeight + y) >= document.body.offsetHeight) {
+        scrollStatus = "bottom";
+      } else {
+        var isScrollDown = (y - lastScrollY > 0) ? true : false;
+        scrollStatus = isScrollDown ? "down" : "up";
+      }
+
+      lastScrollY = y;
+      documentElement.setAttribute("data-scroll-status", scrollStatus);
+    }
+
+    window.addEventListener('scroll', function(e) {
+      storeScrollData();
+    });
+
+    storeScrollData();
+  }
+  document.addEventListener('DOMContentLoaded', initHeader);
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script>
+  function hashLocate(hashValue) {
+    hashValue = hashValue.replace(/^.*#h-/, '');
+    hashValue = decodeURIComponent(hashValue);
+    var element = document.getElementById(hashValue);
+
+    if (!element) {
+      return;
+    }
+
+    var header = document.querySelector('header.site-header');
+    var headerRect = header.getBoundingClientRect();
+    var headerTop = Math.floor(headerRect.top);
+    var headerHeight = Math.floor(headerRect.height);
+    var scrollPos = getScrollPos();
+    var offsetY = element.offsetTop - (headerTop + headerHeight + 20);
+
+    if (offsetY == scrollPos.y) {
+      return;
+    }
+
+    if (headerTop == 0  && offsetY > scrollPos.y) {
+      offsetY += headerHeight + 2;
+    } else if (headerTop < 0  && offsetY < scrollPos.y) {
+      offsetY -= headerHeight - 2;
+    }
+
+    smoothScrollTo(offsetY);
+  }
+
+  // The first event occurred
+  window.addEventListener('load', function(event) {
+    if (window.location.hash) {
+      hashLocate(window.location.hash);
+    }
+  });
+
+  // The first event occurred
+  window.addEventListener('click', function(event) {
+    if (event.target.tagName.toLowerCase() == 'a') {
+      hashLocate(event.target.getAttribute('href'));
+    }
+  });
+</script>
+<div class="theme-toggle">
+  <input type="checkbox" id="theme-switch">
+  <label for="theme-switch">
+    <div class="toggle"></div>
+    <div class="names">
+      <p class="light">Light</p>
+      <p class="dark">Dark</p>
+    </div>
+  </label>
+</div>
+
+
+
+
+<script>
+  (function() {
+    var sw = document.getElementById('theme-switch');
+    var html = document.getElementsByTagName('html')[0];
+    var nightModeOption = ('auto' || 'auto').toLowerCase();
+    var storage = nightModeOption === 'manual'
+        ? localStorage
+        : sessionStorage;
+    var themeData = loadThemeData();
+
+    function saveThemeData(data) {
+      storage.setItem('theme', JSON.stringify(data));
+    }
+
+    function loadThemeData() {
+      var data = storage.getItem('theme');
+      try {
+        data = JSON.parse(data ? data : '');
+      } catch(e) {
+        data = { nightShift: undefined, autoToggleAt: 0 };
+        saveThemeData(data);
+      }
+      return data;
+    }
+
+    function handleThemeToggle(nightShift) {
+      themeData.nightShift = nightShift;
+      saveThemeData(themeData);
+      html.dataset.theme = nightShift ? 'dark' : 'light';
+      setTimeout(function() {
+        sw.checked = nightShift ? true : false;
+      }, 50);
+    }
+
+    function autoThemeToggle() {
+      // Next time point of theme toggle
+      var now = new Date();
+      var toggleAt = new Date();
+      var hours = now.getHours();
+      var nightShift = hours >= 19 || hours <=7;
+
+      if (nightShift) {
+        if (hours > 7) {
+          toggleAt.setDate(toggleAt.getDate() + 1);
+        }
+        toggleAt.setHours(7);
+      } else {
+        toggleAt.setHours(19);
+      }
+
+      toggleAt.setMinutes(0);
+      toggleAt.setSeconds(0);
+      toggleAt.setMilliseconds(0)
+
+      var delay = toggleAt.getTime() - now.getTime();
+
+      // auto toggle theme mode
+      setTimeout(function() {
+        handleThemeToggle(!nightShift);
+      }, delay);
+
+      return {
+        nightShift: nightShift,
+        toggleAt: toggleAt.getTime()
+      };
+    }
+
+    // Listen the theme toggle event
+    sw.addEventListener('change', function(event) {
+      handleThemeToggle(event.target.checked);
+    });
+
+    if (nightModeOption == 'auto') {
+      var data = autoThemeToggle();
+
+      // Toggle theme by local setting
+      if (data.toggleAt > themeData.autoToggleAt) {
+        themeData.autoToggleAt = data.toggleAt;
+        handleThemeToggle(data.nightShift);
+      } else {
+        handleThemeToggle(themeData.nightShift);
+      }
+    } else if (nightModeOption == 'manual') {
+      handleThemeToggle(themeData.nightShift);
+    } else {
+      var nightShift = themeData.nightShift;
+      if (nightShift === undefined) {
+        nightShift = nightModeOption === 'on';
+      }
+      handleThemeToggle(nightShift);
+    }
+  })();
+</script>
+<div id="click-to-top" class="click-to-top">
+  <i class="fa fa-arrow-up"></i>
+</div>
+<script>
+  (function () {
+    const clickToTop = document.getElementById('click-to-top');
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 100) {
+        clickToTop.classList.add('show')
+      }else {
+        clickToTop.classList.remove('show')
+      }
+    });
+    clickToTop.addEventListener('click', () => {
+      window.smoothScrollTo(0);
+    });
+  })();
+</script>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <div class="framework">
+  <section class="main">
+
+     <div class="post">
+  <section>
+
+
+
+
+
+
+
+
+
+<header class="post-header">
+  <h1 class="post-title p-name" itemprop="name headline">Uncovering Hidden .NET Assemblies</h1>
+  <h2 class="post-subtitle"></h2>
+
+  <div class="post-meta">
+    <time class="dt-published" datetime="2022-09-21T00:00:00-05:00" itemprop="datePublished"><i class="fa fa-calendar"></i> Sep 21, 2022
+    </time><span class="post-author left-vsplit"><i class="fa fa-pencil"></i> Michael Henry, Red Team X</span>
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <span class="post-reading-time left-vsplit"><i class="fa fa-clock-o"></i> About 8 mins</span>
+  </div></header>
+<article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+    <div class="post-content e-content" itemprop="articleBody">
+
+      
+<p>We recently completed a security review of ControlUp Agent by ControlUp Technologies. The software is responsible for remote management and analytics of agent hosts on which it runs. The software is typically deployed in virtualization infrastructure environments. This writeup details the steps taken to assess the software, bypass obfuscation, and get remote unauthenticated code execution as NT AUTHORITY\SYSTEM on any host running the ControlUp Agent software (&lt; v8.2.5) so long as it’s reachable on the network.</p>
+
+<p>We reported this issue to ControlUp on May 11, 2021. They acknowledged the report the next day, thanked us for our report, and informed us that the usage of static encryption keys had already been proactively fixed as of version 8.2.5. You can read the <a href="https://github.com/fbredteam/external-disclosures/security/advisories/GHSA-vmc4-wm3f-w3fr">original report we sent to ControlUp</a>. CVE-2021-45913 was assigned to track this vulnerability.</p>
+
+<p>The ControlUp Agent (cuAgent) software is written in .NET. This is ideal for reverse engineering – .NET usually decompiles to nearly the same thing that the developer initially wrote. But we noticed something strange with the Smart-X ControlUp binaries. Firstly, there weren’t a lot of .NET assembly DLLs that came along with the project. That’s not strange by itself, but often .NET binaries come with a lot of extra DLLs. Looking in Process Explorer shows that there are many loaded assemblies – but we weren’t able to find them in DotPeek or on disk.</p>
+
+<p><img src="https://metaredteam.github.io/public_comms_site/assets/images/NET_Assemblies/cuAgent_properties.png" alt="&quot;Process Explorer showing loaded Assemblies in cuAgent.exe&quot;" /></p>
+
+<p>They also use some sort of obfuscation. Class, method, and variable names look like this:</p>
+
+<p><img src="https://metaredteam.github.io/public_comms_site/assets/images/NET_Assemblies/obfuscation.png" alt="&quot;Obfuscated .NET method&quot;" /></p>
+
+<p>Not only do they have odd class, variable, and method names – they have a lot of dead code. Note that the case 0: on line 337 will never execute. It looks like obfuscation to slow down a reverser. Also a lot of “if (false)” statements are littered throughout the code.</p>
+
+<p>Based on inspecting the running binary, we know that they’re creating WCF named pipes and TCP endpoints. But we couldn’t find any references in the code where this happens.</p>
+
+<p>Reviewing more code, we stumbled across this:</p>
+
+<p><img src="https://metaredteam.github.io/public_comms_site/assets/images/NET_Assemblies/chararray.png" alt="&quot;Suspicious charArray&quot;" /></p>
+
+<p>That seemed odd, so I spent a bit of time reversing what is going on. That charArray gets bitwise inverted. At that point, it is more readable:</p>
+
+<pre><code class="language-.NET">AppLoadTimeTracer.AgentSideCommon, Version=1.0.0.0, Culture=neutral, \
+PublicKeyToken=null`pkC3o4ibHqbaW9eT+sfYIA==`SmartX.Common, Version=1.0.0.0, \
+Culture=neutral, PublicKeyToken=null`nZLN7WTbcAXIfmox4Owtnw==`...
+</code></pre>
+
+<p>After splitting on the backtick delimiter, we are left with a list of AssemblyInfo:base64 pairs. At this point, I exported the code that does the unpacking and copied it to a Visual Studio .NET project where I could rename variables and clean it up by removing those dead conditionals.</p>
+
+<p>Reversing more of the code shows they’re getting the manifest resource stream based on the base64 name and passing it to a new function.</p>
+
+<p><img src="https://metaredteam.github.io/public_comms_site/assets/images/NET_Assemblies/des.png" alt="&quot;Reversed code showing DES being used&quot;" /></p>
+
+<p>In this next function, they read and ignore the first 3 bytes of the stream. They read the 4th byte as a flag byte. The decoded bits of the flag are:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>0: unknown
+1: Encrypted assembly
+2: unknown
+3: Compressed assembly
+4-7: unknown
+</code></pre></div></div>
+
+<p>An assembly resource file can be a raw assembly, encrypted, compressed, or encrypted and compressed. If it’s compressed, they simply call DeflateStream on it. If it’s encrypted, they use DESCryptoServiceProvider. But where are the key and IV?</p>
+
+<p>In the encrypted case, the next 8 bytes in the resource stream are the IV and the following 8 bytes are the key:</p>
+
+<p><img src="https://metaredteam.github.io/public_comms_site/assets/images/NET_Assemblies/desdecrypt.png" alt="&quot;Reversed code showing DES decryption function and where key + IV are found&quot;" /></p>
+
+<p>So we now have everything we need to retrieve all the assemblies from the executables and write them to files. Once we write them to a file, we can load them in DotPeek and keep working:</p>
+
+<p><img src="https://metaredteam.github.io/public_comms_site/assets/images/NET_Assemblies/dotpeek.png" alt="&quot;DotPeek showing decrypted assemblies&quot;" /></p>
+
+<p>In the end, we were able to recover 156 additional assemblies across 3 obfuscated service binaries. We ended up finding the named pipe and TCP WCF handlers, as well.</p>
+
+<p>Once we recovered the inner assemblies, we found some other oddities. They store some encrypted RSA private keys in the ControlUp Monitor’s obfuscated resource files. One of the keys is used in the authentication between the ControlUp Monitor and the ControlUp Agent. Getting this encrypted RSA key was actually the reason to start digging so deeply into the second-level .NET Assembly packing. The RSA private key is encrypted, but it uses the same hard-coded 3DES key used in many ControlUp methods. The 3DES key doesn’t provide strong confidentiality since it’s easily found in all of the executable’s resources.</p>
+
+<p>This RSA private key is used to decrypt the session key/IV returned from the PrepareConnection call. The session key/IV is used to 3DES encrypt the UserTokens that are then decrypted on the server. This is the root of the authentication bypass - if an unauthenticated user knows this 3DES key/IV, they can encrypt a UserTokens of valid@junk;$SID (where “junk” is ignored, “valid” is what they use to determine if the connection is valid, and $SID is the SID of an account in the Administrators group). That’s it! No password, kerberos ticket – nothing else is required.</p>
+
+<p>The end result is unauthenticated remote code execution as <code class="language-plaintext highlighter-rouge">NT AUTHORITY\SYSTEM</code>. This affects all users of the ControlUp Agent software with version &lt; 8.2.5.</p>
+
+<p>Running the PoC shows that we can connect to a socket, send it some packets, and get it to execute code for us as <code class="language-plaintext highlighter-rouge">NT AUTHORITY\SYSTEM</code>:</p>
+
+<p><img src="https://metaredteam.github.io/public_comms_site/assets/images/NET_Assemblies/poc.png" alt="&quot;PoC works, showing execution as SYSTEM&quot;" /></p>
+
+<p>More detail, including the PoC, can be found in <a href="https://github.com/metaredteam/external-disclosures/security/advisories/GHSA-vmc4-wm3f-w3fr">our advisory</a>. The code that I used to do the de-obfuscation is included here:</p>
+
+<pre><code class="language-.NET">using System;
+using System.IO;
+using System.IO.Compression;
+using System.Reflection;
+using System.Security.Cryptography;
+
+namespace StringArrayReverser
+{
+    class Program
+    {
+
+        static string[] DecodeString(char[] input)
+        {
+            for (int index = 0; index &lt; input.Length; ++index)
+                input[index] = (char)~(ushort)input[index];
+            string[] strArray = new string(input).Split('`');
+            return strArray;
+        }
+
+        static void FalconReverser()
+        {
+            char[] charArray = "ﾾﾏﾏﾳﾐﾞﾛﾫﾖﾒﾚﾫﾍ&lt;SNIP&gt;ﾼﾑﾖￆﾞﾝￔﾶﾵￔﾈￂￂ".ToCharArray();
+            var strArray = DecodeString(charArray);
+
+            UnpackAssemblies("AppLoadTimeTracer.exe", strArray);
+        }
+
+        static byte[] DESDecrypt(Stream InStream)
+        {
+            MemoryStream memoryStream = new MemoryStream();
+            Stream stream = InStream;
+
+            for (int index = 1; index &lt; 4; ++index)
+            {
+                InStream.ReadByte();
+            }
+            ushort Flags = (ushort)~InStream.ReadByte();
+            // Skip 3 bytes, read 4th byte
+
+            // Encrypted
+            if (((int)Flags &amp; 2) != 0)
+            {
+                DESCryptoServiceProvider cryptoServiceProvider = new DESCryptoServiceProvider();
+                byte[] DESIV = new byte[8];
+                InStream.Read(DESIV, 0, 8);
+                cryptoServiceProvider.IV = DESIV;
+                byte[] DESKey = new byte[8];
+                InStream.Read(DESKey, 0, 8);
+
+                cryptoServiceProvider.Key = DESKey;
+
+                memoryStream.Position = 0L;
+                ICryptoTransform decryptor = cryptoServiceProvider.CreateDecryptor();
+                int inputBlockSize = decryptor.InputBlockSize;
+                int outputBlockSize = decryptor.OutputBlockSize;
+                byte[] numArray1 = new byte[decryptor.OutputBlockSize];
+                byte[] numArray2 = new byte[decryptor.InputBlockSize];
+                int position;
+                for (position = (int)InStream.Position; (long)(position + inputBlockSize) &lt; InStream.Length; position += inputBlockSize)
+                {
+                    InStream.Read(numArray2, 0, inputBlockSize);
+                    int count = decryptor.TransformBlock(numArray2, 0, inputBlockSize, numArray1, 0);
+                    memoryStream.Write(numArray1, 0, count);
+                }
+
+                InStream.Read(numArray2, 0, (int)(InStream.Length - (long)position));
+                byte[] buffer3 = decryptor.TransformFinalBlock(numArray2, 0, (int)(InStream.Length - (long)position));
+                memoryStream.Write(buffer3, 0, buffer3.Length);
+                stream = (Stream)memoryStream;
+                stream.Position = 0L;
+            }
+            if (((int)Flags &amp; 8) != 0)
+            {
+                var tmpStream = new MemoryStream();
+                DeflateStream deflateStream = new DeflateStream(stream, CompressionMode.Decompress);
+                deflateStream.CopyTo(tmpStream);
+
+                memoryStream = tmpStream;
+            }
+
+            if (Flags == 0xff00)
+            {
+                memoryStream.SetLength(0);
+                stream.CopyTo(memoryStream);
+            }
+
+            return memoryStream.ToArray();
+        }
+
+        static void UnpackAssemblies(string parent, string[] strArray)
+        {
+            int i;
+
+            Assembly ass = Assembly.LoadFrom(parent);
+
+            Console.WriteLine("Loaded {0}", ass.FullName);
+            var dirname = "output\\" + parent + "\\";
+            Directory.CreateDirectory("output");
+            Directory.CreateDirectory(dirname);
+            for (i = 0; i &lt; strArray.Length; i += 2)
+            {
+                var info = strArray[i];
+                var b64 = strArray[i + 1];
+
+                var name = info.Split(',')[0];
+
+                Console.WriteLine("{0} {1} {2}", name, b64, info);
+                var mrs = ass.GetManifestResourceStream(b64);
+                var decryptedBytes = DESDecrypt(mrs);
+                if (b64.EndsWith("#"))
+                {
+                    File.WriteAllBytes(dirname + "\\" + name + ".pdb", decryptedBytes);
+                }
+                else
+                {
+                    File.WriteAllBytes(dirname + "\\" + name + ".dll", decryptedBytes);
+                }
+            }
+        }
+
+        static void cuAgentReverser()
+        {
+            /* Note: This needs to be fixed to include the array from the binary. */
+            char[] charArray = "ﾬﾒﾞﾍﾋﾧ\x&lt;SNIP&gt;\xFFC9ﾪﾚﾛﾮￂￂ".ToCharArray();
+            var strArray = DecodeString(charArray);
+
+            UnpackAssemblies("cuAgent.exe", strArray);
+
+        }
+
+        static void ConsoleReverser()
+        {
+            char[] charArray = "ﾾﾜﾋﾖﾐﾑﾺﾉ&lt;SNIP&gt;ﾏﾮￊￌﾙﾘￂￂ".ToCharArray();
+            var strArray = DecodeString(charArray);
+
+            UnpackAssemblies("ControlUpConsole.exe", strArray);
+        }
+
+        static void Main(string[] args)
+        {
+
+            FalconReverser();
+
+            cuAgentReverser();
+
+            ConsoleReverser();
+        }
+    }
+}
+</code></pre>
+
+
+    </div>
+
+</article>
+<div class="post-nav"><span></span><a class="next" href="/public_comms_site/post-exploitation/2022/12/19/In-Memory-Execution-in-macOS.html" title="In-Memory Execution in macOS: the Old and the New">In-Memory Execution in macOS: the Old...</a></div><div class="post-related">
+      <div>Related Articles</div>
+      <ul>
+        <li class="">
+          <a class="post-link"
+            href="/public_comms_site/post-exploitation/2022/12/19/In-Memory-Execution-in-macOS.html"
+            title="In-Memory Execution in macOS: the Old and the New">
+            In-Memory Execution in macOS: the Old and the New<span class="post-badges">
+  <span class="post-badge badge-top">TOP</span>
+  <span class="post-badge badge-new">NEW</span>
+</span>
+</a>
+        </li><li class="">
+          <a class="post-link"
+            href="/public_comms_site/exploitation/2024/06/03/Android-Zygote-injection.html"
+            title="Becoming any Android app via Zygote command injection">
+            Becoming any Android app via Zygote command injection<span class="post-badges">
+  <span class="post-badge badge-top">TOP</span>
+  <span class="post-badge badge-new">NEW</span>
+</span>
+</a>
+        </li><li class="">
+          <a class="post-link"
+            href="/public_comms_site/exploitation/2024/03/04/Android-run-as-forgery.html"
+            title="Bypassing the &quot;run-as&quot; debuggability check on Android via newline injection">
+            Bypassing the &quot;run-as&quot; debuggability check on Android via newline injection<span class="post-badges">
+  <span class="post-badge badge-top">TOP</span>
+  <span class="post-badge badge-new">NEW</span>
+</span>
+</a>
+        </li><li class="">
+          <a class="post-link"
+            href="/public_comms_site/reversing/2022/09/21/Uncovering_Hidden_NET_Assemblies.html"
+            title="Uncovering Hidden .NET Assemblies">
+            Uncovering Hidden .NET Assemblies<span class="post-badges">
+  <span class="post-badge badge-top">TOP</span>
+  <span class="post-badge badge-new">NEW</span>
+</span>
+</a>
+        </li></ul>
+    </div><div class="post-comments"></div></section>
+</div>
+
+
+  </section>
+  <section class="sidebar" style="margin-left: 15px;">
+    <!-- Get sidebar items --><style type="text/css" media="screen">
+.post-menu ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+</style>
+
+<div class="post-menu">
+  <div class="post-menu-title">TOC</div>
+  <div class="post-menu-content"></div>
+</div>
+
+<script>
+  function generateContent() {
+    var menu = document.querySelector(".post-menu");
+    var menuContent =  menu.querySelector(".post-menu-content");
+    var headings = document.querySelector(".post-content").querySelectorAll("h2, h3, h4, h5, h6");
+
+    // Hide menu when no headings
+    if (headings.length === 0) {
+      return menu.style.display = "none";
+    }
+
+    // Generate post menu
+    var menuHTML = '';
+    for (var i = 0; i < headings.length; i++) {
+      var h = headings[i];
+      menuHTML += (
+        '<li class="h-' + h.tagName.toLowerCase() + '">'
+        + '<a href="#h-' + h.getAttribute('id') + '">' + h.textContent + '</a></li>');
+    }
+
+    menuContent.innerHTML = '<ul>' + menuHTML + '</ul>';
+
+    // The header element
+    var header = document.querySelector('header.site-header');
+
+    function doMenuCollapse(index, over_items) {
+      var items = menuContent.firstChild.children;
+
+      if (over_items == undefined) {
+        over_items = 20;
+      }
+
+      if (items.length < over_items) {
+        return;
+      }
+
+      var activeItem = items[index];
+      var beginItem = activeItem
+      var endItem = activeItem
+      var beginIndex = index;
+      var endIndex = index + 1;
+      while (beginIndex >= 0
+        && !items[beginIndex].classList.contains('h-h2')) {
+        beginIndex -= 1;
+      }
+      while (endIndex < items.length
+        && !items[endIndex].classList.contains('h-h2')) {
+        endIndex += 1;
+      }
+      for (var i = 0; i < beginIndex; i++) {
+        item = items[i]
+        if (!item.classList.contains('h-h2')) {
+          item.style.display = 'none';
+        }
+      }
+      for (var i = beginIndex + 1; i < endIndex; i++) {
+        item = items[i]
+        // if (!item.classList.contains('h-h2')) {
+          item.style.display = '';
+        // }
+      }
+      for (var i = endIndex; i < items.length; i++) {
+        item = items[i]
+        if (!item.classList.contains('h-h2')) {
+          item.style.display = 'none';
+        }
+      }
+    }
+
+    // Init menu collapsed
+    doMenuCollapse(-1);
+
+    // Active the menu item
+    window.addEventListener('scroll', function (event) {
+      var lastActive = menuContent.querySelector('.active');
+      var changed = true;
+      var activeIndex = -1;
+      for (var i = headings.length - 1; i >= 0; i--) {
+        var h = headings[i];
+        var headingRect = h.getBoundingClientRect();
+        var headerRect = header.getBoundingClientRect();
+        var headerTop = Math.floor(headerRect.top);
+        var headerHeight = Math.floor(headerRect.height);
+        var headerHeight = headerTop + headerHeight + 20;
+        if (headingRect.top <= headerHeight) {
+          var id = 'h-' + h.getAttribute('id');
+          var a = menuContent.querySelector('a[href="#' + id  + '"]');
+          var curActive = a.parentNode;
+          if (curActive) {
+            curActive.classList.add('active');
+            activeIndex = i;
+          }
+          if (lastActive == curActive) {
+            changed = false;
+          }
+          break;
+        }
+      }
+      if (changed) {
+        if (lastActive) {
+          lastActive.classList.remove('active');
+        }
+        doMenuCollapse(activeIndex);
+      }
+      event.preventDefault();
+    });
+  }
+  generateContent();
+</script>
+</section>
+</div>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/public_comms_site/"></data>
+
+  <div class="wrapper">
+    <div class="site-footer-inner"><div>&copy; 2022-2026 Meta Red Team X</div>
+      <div>Powered by <a title="Jekyll is a simple, blog-aware, static site
+      generator." href="https://jekyllrb.com/">Jekyll</a> &amp; <a title="Yat, yet
+      another theme." href="https://github.com/jeffreytse/jekyll-theme-yat">Yat Theme</a>.</div>
+      <div class="footer-col rss-subscribe">Subscribe <a href="/public_comms_site/feed.xml">via RSS</a></div>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

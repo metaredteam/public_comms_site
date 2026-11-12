@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="google-translate-customization" content="108d9124921d80c3-80e20d618ff053c8-g4f02ec6f3dba68b7-c"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Sandboxing ImageIO media parsing in macOS | Meta Red Team X</title>
+<meta name="generator" content="Jekyll v3.9.5" />
+<meta property="og:title" content="Sandboxing ImageIO media parsing in macOS" />
+<meta name="author" content="Nik Tsytsarkin, Red Team X" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Technical writeups by Meta’s Security folks, including Red Team." />
+<meta property="og:description" content="Technical writeups by Meta’s Security folks, including Red Team." />
+<link rel="canonical" href="https://metaredteam.github.io/public_comms_site/mitigation/2023/09/11/Sandboxing-ImageIO-in-macOS.html" />
+<meta property="og:url" content="https://metaredteam.github.io/public_comms_site/mitigation/2023/09/11/Sandboxing-ImageIO-in-macOS.html" />
+<meta property="og:site_name" content="Meta Red Team X" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2023-09-11T00:00:00-05:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Sandboxing ImageIO media parsing in macOS" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Nik Tsytsarkin, Red Team X"},"dateModified":"2023-09-11T00:00:00-05:00","datePublished":"2023-09-11T00:00:00-05:00","description":"Technical writeups by Meta’s Security folks, including Red Team.","headline":"Sandboxing ImageIO media parsing in macOS","mainEntityOfPage":{"@type":"WebPage","@id":"https://metaredteam.github.io/public_comms_site/mitigation/2023/09/11/Sandboxing-ImageIO-in-macOS.html"},"url":"https://metaredteam.github.io/public_comms_site/mitigation/2023/09/11/Sandboxing-ImageIO-in-macOS.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="icon" href="">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/typeface-noto-sans@0.0.72/index.min.css">
+  <link rel="stylesheet" href="/public_comms_site/assets/css/main.css">
+  <script src="/public_comms_site/assets/js/main.js"></script><link type="application/atom+xml" rel="alternate" href="https://metaredteam.github.io/public_comms_site/feed.xml" title="Meta Red Team X" /><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/default.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js"></script>
+<!-- and it's easy to individually load additional languages -->
+<script charset="UTF-8"
+        src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/languages/go.min.js"
+        async></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script>
+// Init highlight js
+document.addEventListener('DOMContentLoaded', function(event) {
+  var els = document.querySelectorAll('pre code')
+
+  function addLangData(block) {
+    var outer = block.parentElement.parentElement.parentElement;
+    var lang = block.getAttribute('data-lang');
+    for (var i = 0; i < outer.classList.length; i++) {
+      var cls = outer.classList[i];
+      if (cls.startsWith('language-')) {
+        lang = cls;
+        break;
+      }
+    }
+    if (!lang) {
+      cls = block.getAttribute('class');
+      lang = cls ? cls.replace('hljs ', '') : '';
+    }
+    if (lang.startsWith('language-')) {
+      lang = lang.substr(9);
+    }
+    block.setAttribute('class', 'hljs ' + lang);
+    block.parentNode.setAttribute('data-lang', lang);
+  }
+
+  function addBadge(block) {
+    var enabled = ('true' || 'true').toLowerCase();
+    if (enabled == 'true') {
+      var pre = block.parentElement;
+      pre.classList.add('badge');
+    }
+  }
+
+  function handle(block) {
+    addLangData(block);
+    addBadge(block)
+    hljs.highlightBlock(block);
+  }
+
+  for (var i = 0; i < els.length; i++) {
+    var el = els[i];
+    handle(el);
+  }
+});
+</script>
+
+<style>
+  /* code language badge */
+  pre.badge::before {
+    content: attr(data-lang);
+    color: #fff;
+    background-color: #ff4e00;
+    padding: 0 .5em;
+    border-radius: 0 2px;
+    text-transform: uppercase;
+    text-align: center;
+    min-width: 32px;
+    display: inline-block;
+    position: absolute;
+    right: 0;
+  }
+
+  /* fix wrong badge display for firefox browser */
+  code > table pre::before {
+    display: none;
+  }
+</style>
+<script
+  src="//cdnjs.cloudflare.com/ajax/libs/photoswipe/5.3.7/umd/photoswipe-lightbox.umd.min.js" async></script>
+<script
+  src="//cdnjs.cloudflare.com/ajax/libs/photoswipe/5.3.7/umd/photoswipe.umd.min.js" async></script>
+<link
+  href="//cdnjs.cloudflare.com/ajax/libs/photoswipe/5.3.7/photoswipe.min.css"
+  rel="stylesheet"
+/>
+<style>
+  .pswp .pswp__container .pswp__img {
+    background-color: white;
+  }
+</style>
+
+<script>
+  function initPhotoSwipe() {
+    let customOptions = {};
+
+    try {
+      const data = ``.replaceAll("=>", ":");
+      customOptions = JSON.parse(data);
+    } catch (e) {
+      console.info("Invalid custom photo previewer options! " + e.message);
+    }
+
+    // Define object and gallery options
+    const options = Object.assign(
+      {
+        gallery: "section.main",
+        children: "a.photo-swipe",
+        photo_scale: 2,
+        // dynamic import is not supported in UMD version
+        pswpModule: PhotoSwipe,
+      },
+      customOptions
+    );
+
+    const galleryEl = document.querySelector(options.gallery);
+    if (!galleryEl) {
+      return;
+    }
+
+    const imgEls = [];
+    const els = galleryEl.querySelectorAll("img:not(.emoji)");
+    els.forEach((el) => {
+      if (el.src.trim() == "") {
+        return;
+      }
+      if (!imgEls.includes(el)) {
+        imgEls.push(el);
+      }
+    });
+
+    if (imgEls.length === 0) {
+      return;
+    }
+
+    imgEls.forEach((imgEl) => {
+      imgEl.outerHTML = `
+      <a class="photo-swipe"
+        href="${imgEl.src}"
+        data-pswp-width="${
+          Math.max(imgEl.naturalWidth, imgEl.width) * options.photo_scale
+        }"
+        data-pswp-height="${
+          Math.max(imgEl.naturalHeight, imgEl.height) * options.photo_scale
+        }"
+        data-pswp-caption="${imgEl.getAttribute("caption") || imgEl.alt}"
+        target="_blank">
+        ${imgEl.outerHTML}
+      </a>`;
+    });
+
+    // Initialize PhotoSwipe 5
+    var lightbox = new PhotoSwipeLightbox(options);
+
+    lightbox.init();
+  }
+
+  window.addEventListener("load", initPhotoSwipe);
+</script>
+  <link rel="stylesheet" href="/public_comms_site/assets/css/rtx.css">
+</head>
+<body>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<header class="site-header " role="banner">
+
+  <div class="wrapper">
+    <div class="site-header-inner"><span class="site-brand"><a class="site-brand-inner" rel="author" href="/public_comms_site/">
+  <img class="site-favicon" title="Meta Red Team X" src="" onerror="this.style.display='none'">
+  Meta Red Team X
+</a>
+</span><nav class="site-nav">
+          <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+          <label for="nav-trigger">
+            <span class="menu-icon">
+              <svg viewBox="0 0 18 15" width="18px" height="15px">
+                <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+              </svg>
+            </span>
+          </label>
+
+          <div class="trigger"><a class="page-link" href="/public_comms_site/bugs.html">BUGS</a><a class="page-link" href="/public_comms_site/about.html">ABOUT</a><a class="page-link" href="/public_comms_site/">HOME</a>
+
+
+
+
+</div>
+        </nav></div>
+  </div>
+</header>
+
+<script>
+  function initHeader() {
+    var lastScrollY = getScrollPos().y;
+    var documentElement = document.documentElement;
+
+    function storeScrollData() {
+      var y = getScrollPos().y;var scrollStatus = "";
+
+      if (y <= 0) {
+        scrollStatus = "top";
+      } else if ((window.innerHeight + y) >= document.body.offsetHeight) {
+        scrollStatus = "bottom";
+      } else {
+        var isScrollDown = (y - lastScrollY > 0) ? true : false;
+        scrollStatus = isScrollDown ? "down" : "up";
+      }
+
+      lastScrollY = y;
+      documentElement.setAttribute("data-scroll-status", scrollStatus);
+    }
+
+    window.addEventListener('scroll', function(e) {
+      storeScrollData();
+    });
+
+    storeScrollData();
+  }
+  document.addEventListener('DOMContentLoaded', initHeader);
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script>
+  function hashLocate(hashValue) {
+    hashValue = hashValue.replace(/^.*#h-/, '');
+    hashValue = decodeURIComponent(hashValue);
+    var element = document.getElementById(hashValue);
+
+    if (!element) {
+      return;
+    }
+
+    var header = document.querySelector('header.site-header');
+    var headerRect = header.getBoundingClientRect();
+    var headerTop = Math.floor(headerRect.top);
+    var headerHeight = Math.floor(headerRect.height);
+    var scrollPos = getScrollPos();
+    var offsetY = element.offsetTop - (headerTop + headerHeight + 20);
+
+    if (offsetY == scrollPos.y) {
+      return;
+    }
+
+    if (headerTop == 0  && offsetY > scrollPos.y) {
+      offsetY += headerHeight + 2;
+    } else if (headerTop < 0  && offsetY < scrollPos.y) {
+      offsetY -= headerHeight - 2;
+    }
+
+    smoothScrollTo(offsetY);
+  }
+
+  // The first event occurred
+  window.addEventListener('load', function(event) {
+    if (window.location.hash) {
+      hashLocate(window.location.hash);
+    }
+  });
+
+  // The first event occurred
+  window.addEventListener('click', function(event) {
+    if (event.target.tagName.toLowerCase() == 'a') {
+      hashLocate(event.target.getAttribute('href'));
+    }
+  });
+</script>
+<div class="theme-toggle">
+  <input type="checkbox" id="theme-switch">
+  <label for="theme-switch">
+    <div class="toggle"></div>
+    <div class="names">
+      <p class="light">Light</p>
+      <p class="dark">Dark</p>
+    </div>
+  </label>
+</div>
+
+
+
+
+<script>
+  (function() {
+    var sw = document.getElementById('theme-switch');
+    var html = document.getElementsByTagName('html')[0];
+    var nightModeOption = ('auto' || 'auto').toLowerCase();
+    var storage = nightModeOption === 'manual'
+        ? localStorage
+        : sessionStorage;
+    var themeData = loadThemeData();
+
+    function saveThemeData(data) {
+      storage.setItem('theme', JSON.stringify(data));
+    }
+
+    function loadThemeData() {
+      var data = storage.getItem('theme');
+      try {
+        data = JSON.parse(data ? data : '');
+      } catch(e) {
+        data = { nightShift: undefined, autoToggleAt: 0 };
+        saveThemeData(data);
+      }
+      return data;
+    }
+
+    function handleThemeToggle(nightShift) {
+      themeData.nightShift = nightShift;
+      saveThemeData(themeData);
+      html.dataset.theme = nightShift ? 'dark' : 'light';
+      setTimeout(function() {
+        sw.checked = nightShift ? true : false;
+      }, 50);
+    }
+
+    function autoThemeToggle() {
+      // Next time point of theme toggle
+      var now = new Date();
+      var toggleAt = new Date();
+      var hours = now.getHours();
+      var nightShift = hours >= 19 || hours <=7;
+
+      if (nightShift) {
+        if (hours > 7) {
+          toggleAt.setDate(toggleAt.getDate() + 1);
+        }
+        toggleAt.setHours(7);
+      } else {
+        toggleAt.setHours(19);
+      }
+
+      toggleAt.setMinutes(0);
+      toggleAt.setSeconds(0);
+      toggleAt.setMilliseconds(0)
+
+      var delay = toggleAt.getTime() - now.getTime();
+
+      // auto toggle theme mode
+      setTimeout(function() {
+        handleThemeToggle(!nightShift);
+      }, delay);
+
+      return {
+        nightShift: nightShift,
+        toggleAt: toggleAt.getTime()
+      };
+    }
+
+    // Listen the theme toggle event
+    sw.addEventListener('change', function(event) {
+      handleThemeToggle(event.target.checked);
+    });
+
+    if (nightModeOption == 'auto') {
+      var data = autoThemeToggle();
+
+      // Toggle theme by local setting
+      if (data.toggleAt > themeData.autoToggleAt) {
+        themeData.autoToggleAt = data.toggleAt;
+        handleThemeToggle(data.nightShift);
+      } else {
+        handleThemeToggle(themeData.nightShift);
+      }
+    } else if (nightModeOption == 'manual') {
+      handleThemeToggle(themeData.nightShift);
+    } else {
+      var nightShift = themeData.nightShift;
+      if (nightShift === undefined) {
+        nightShift = nightModeOption === 'on';
+      }
+      handleThemeToggle(nightShift);
+    }
+  })();
+</script>
+<div id="click-to-top" class="click-to-top">
+  <i class="fa fa-arrow-up"></i>
+</div>
+<script>
+  (function () {
+    const clickToTop = document.getElementById('click-to-top');
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 100) {
+        clickToTop.classList.add('show')
+      }else {
+        clickToTop.classList.remove('show')
+      }
+    });
+    clickToTop.addEventListener('click', () => {
+      window.smoothScrollTo(0);
+    });
+  })();
+</script>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <div class="framework">
+  <section class="main">
+
+     <div class="post">
+  <section>
+
+
+
+
+
+
+
+
+
+<header class="post-header">
+  <h1 class="post-title p-name" itemprop="name headline">Sandboxing ImageIO media parsing in macOS</h1>
+  <h2 class="post-subtitle"></h2>
+
+  <div class="post-meta">
+    <time class="dt-published" datetime="2023-09-11T00:00:00-05:00" itemprop="datePublished"><i class="fa fa-calendar"></i> Sep 11, 2023
+    </time><span class="post-author left-vsplit"><i class="fa fa-pencil"></i> Nik Tsytsarkin, Red Team X</span>
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <span class="post-reading-time left-vsplit"><i class="fa fa-clock-o"></i> About 7 mins</span>
+  </div></header>
+<article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+    <div class="post-content e-content" itemprop="articleBody">
+
+      
+<p>While assessing the potential impact of the latest <a href="https://citizenlab.ca/2023/09/blastpass-nso-group-iphone-zero-click-zero-day-exploit-captured-in-the-wild/">BLASTPASS Zero-Click, Zero-Day Exploit</a> on our Family of Apps, we discovered a feature in ImageIO that moves image parsing to an out-of-process sandbox. This feature mitigates the effects of vulnerabilities related to image parsing on macOS similar to BLASTPASS. App developers can enable this feature on macOS by setting the <code class="language-plaintext highlighter-rouge">IIOEnableOOP</code> preference true. Anyone can enable this feature by setting the environment variable <code class="language-plaintext highlighter-rouge">IIOEnableOOP=YES</code> before launching an app. It is not available on iOS.</p>
+
+<h2 id="background">Background</h2>
+
+<p>In light of the BLASTPASS 0-day being <a href="https://gizmodo.com/apple-security-update-pegasus-zero-day-blastpass-1850817040">exploited in the wild</a>, we sought to understand how image parsing was performed on Apple devices.</p>
+
+<p>Apple provides the <code class="language-plaintext highlighter-rouge">CGImage*</code> set of APIs that enable developers to conveniently work with various image formats. Although these APIs have a prefix indicating the CoreGraphics framework, the underlying parser code resides in ImageIO.framework. Developers may not use CoreGraphics APIs directly and may instead use UIKit’s <a href="https://developer.apple.com/documentation/uikit/uiimage?language=objc">UIImage</a> class which wraps <code class="language-plaintext highlighter-rouge">CGImage*</code> APIs and can be used to easily render an image in a UIKit application.</p>
+
+<p>Information about Apple’s image parsing practices is scarce, with the exception of a <a href="https://googleprojectzero.blogspot.com/2020/04/fuzzing-imageio.html">2020 article by Project Zero</a> which mentioned that some formats like PSD were parsed out-of-process, while the majority were done in-process. Out-of-process sandboxing of media parsers raise attacker costs by requiring a sandbox escape before exploit code can gain access to app data. This is desirable from a defense perspective.</p>
+
+<p>We wanted to understand which media formats were sandboxed out-of-process, if any.</p>
+
+<h2 id="imageioxpcservice">ImageIOXPCService</h2>
+
+<p>According to the Project Zero post, out-of-process image parsing is handled by the ImageIOXPCService service <code class="language-plaintext highlighter-rouge">/System/Library/Frameworks/ImageIO.framework/Versions/A/XPCServices/ImageIOXPCService.xpc/Contents/MacOS/ImageIOXPCService</code>.</p>
+
+<p>Examining its exports, we discovered that it provides the same <code class="language-plaintext highlighter-rouge">CGImage*</code> APIs as ImageIO. A comparison of the decompiled code for these APIs revealed that they are very similar.</p>
+
+<p>Additionally, both ImageIO and XPCService import libraries like libPNG, libJPEG, etc., suggesting that they share the same capabilities to parse these formats. The list of imports for ImageIO (left) and ImageIOXPCService (right) is provided below:</p>
+
+<p><img src="https://metaredteam.github.io/public_comms_site/assets/images/Sandboxing_ImageIO/symbol_trees.png" alt="&quot;Symbol trees showing ImageIO exports on the left and ImageIOXPCService on the right, listings are identical&quot;" /></p>
+
+<p>The sandbox config for ImageIOXPCService is located at <code class="language-plaintext highlighter-rouge">/System/Library/Sandbox/Profiles/com.apple.ImageIOXPCService.sb</code>.</p>
+
+<p>Tracing XPC calls using <a href="https://newosxbook.com/tools/XPoCe.html">XPoCe</a>, we didn’t see any calls to <code class="language-plaintext highlighter-rouge">com.apple.imageioxpcservice</code>, but we did see telemetry from all the calls to ImageIO APIs, hinting that image parsing is being done in-process. We also did not see the ImageIOXPCService process show up in Activity Monitor, further confirming that no out-of-process was happening.</p>
+
+<p>Despite signs that ImageIO is capable of out-of-process parsing, all of this pointed towards in-process execution being the default.</p>
+
+<h2 id="debugging">Debugging</h2>
+
+<p>At this point we needed clarity and reached for a debugger. There were a couple APIs that were good starting points:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">CGImageSourceCreateWithData</code> saves the reference to an image buffer, parses the header, and initializes a reader plugin based on the format of the image. The reader plugin is a format-specific plugin that knows how to handle each image format.</li>
+  <li><code class="language-plaintext highlighter-rouge">CGImageSourceCreateImageAtIndex</code> lazily parses the image buffer when pixel data is accessed.</li>
+</ul>
+
+<p>Stepping through <code class="language-plaintext highlighter-rouge">CGImageSourceCreateWithData</code> we see reader initialization determining the image format.</p>
+
+<p>The following code snippet shows <code class="language-plaintext highlighter-rouge">IIO_ReaderHandler::readerForBytes</code> initializing an XPC client before deciding whether to use an XPC server (out-of-process) or not (in-process) for parsing image header data. This pattern repeats when reader plugins prepare to parse image contents.</p>
+
+<p><img src="https://metaredteam.github.io/public_comms_site/assets/images/Sandboxing_ImageIO/XPC_decision.png" alt="&quot;Reader plugin initializing an XPC client before deciding whether to use the XPC server or do parsing in-proc&quot;" /></p>
+
+<h2 id="in-proc-or-out-of-proc">In-Proc or Out-of-Proc?</h2>
+
+<p>We have determined that ImageIO is capable of parsing media both in-process and out-of-process. However, the question remains: how does the library decide where to parse an image? There exists a set of functions beginning with “<code class="language-plaintext highlighter-rouge">useServerFor*</code>” which determines whether the library will use a remote XPC server (out-of-process) for a specific task.</p>
+
+<p><img src="https://metaredteam.github.io/public_comms_site/assets/images/Sandboxing_ImageIO/useServer_funcs.png" alt="&quot;Listing of various useServer* functions that decide whether the sandbox is enabled for different parsing stages&quot;" /></p>
+
+<p>Let’s examine <code class="language-plaintext highlighter-rouge">IIOXPCClient::useServerForIdentification</code>, which determines whether header parsing will be performed locally or in a sandbox. Other <code class="language-plaintext highlighter-rouge">useServerFor*</code> functions are similar:</p>
+
+<p><img src="https://metaredteam.github.io/public_comms_site/assets/images/Sandboxing_ImageIO/macOS_useServer.png" alt="&quot;Ghidra decompilation of macOS' useServerForIdentification method, which is similar to the other useServer* funcs&quot;" /></p>
+
+<p>In our experience, <code class="language-plaintext highlighter-rouge">param_1</code> is always <code class="language-plaintext highlighter-rouge">0xffffffff</code>, and the deciding factor is the byte at an offset of 0x24. By default, the byte at this offset was set, which caused <code class="language-plaintext highlighter-rouge">useServerForIdentification</code> to return false and made all parsing in-process on macOS.</p>
+
+<h3 id="forcing-out-of-proc">Forcing Out-of-Proc</h3>
+
+<p>Modifying this byte in the debugger forced out-of-process parsing, causing ImageIOXPCService to appear in the Activity Monitor. Success!</p>
+
+<p><img src="https://metaredteam.github.io/public_comms_site/assets/images/Sandboxing_ImageIO/ActivityMonitor.png" alt="&quot;macOS' Activity Monitor showing the ImageIOXPCService process running, proving ImageIO is sandboxed&quot;" /></p>
+
+<p>Tracing what initialized that byte, we discovered <code class="language-plaintext highlighter-rouge">IIOXPCClient_block_invoke</code>:</p>
+
+<p><img src="https://metaredteam.github.io/public_comms_site/assets/images/Sandboxing_ImageIO/block_invoke.png" alt="&quot;The block_invoke function's decompilation, showing where the IOPreference is fetched&quot;" /></p>
+
+<p>It sets the value at offset 0x24 into <code class="language-plaintext highlighter-rouge">IIOXPCClientObject</code> based on the <code class="language-plaintext highlighter-rouge">IIOEnableOOP</code> preference. Let’s take a look at how it works:</p>
+
+<p><img src="https://metaredteam.github.io/public_comms_site/assets/images/Sandboxing_ImageIO/IOPreferencesGetBoolean.png" alt="&quot;IOPreferences GetBoolean internals, decompilation showing how it first looks for an env var then pulls from CFPreferences&quot;" /></p>
+
+<p>First, it checks if an environment variable called <code class="language-plaintext highlighter-rouge">IIOEnableOOP</code> is set. If so, this takes precedence over any other preference. We can test our application by setting <code class="language-plaintext highlighter-rouge">IIOEnableOOP=YES</code> to verify that parsing is now occurring out-of-process.</p>
+
+<p>If the environment variable is not set, it falls back to reading a <a href="https://developer.apple.com/documentation/corefoundation/1515497-cfpreferencescopyappvalue?language=objc">CFPreferences</a> value from an app-specific key-value preference store that our application can write to.</p>
+
+<p>To test this, we can call the following to set that app-specific preference:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>CFPreferencesSetAppValue(CFSTR("IIOEnableOOP"), kCFBooleanTrue, kCFPreferencesCurrentApplication);
+</code></pre></div></div>
+
+<p>And it works! Now our application is doing OOP sandboxed parsing for all images that use ImageIO APIs. Note that this preference is persistent and will be saved between different application runs.</p>
+
+<h3 id="does-this-work-on-ios">Does this work on iOS?</h3>
+
+<p>Unfortunately, this does not work on iOS. The ImageIOXPCService binary is not present on iOS, and we can see that the <code class="language-plaintext highlighter-rouge">useServerForIdentification</code> function body is <code class="language-plaintext highlighter-rouge">#ifdef</code>’d blank. The <code class="language-plaintext highlighter-rouge">IIOEnableOOP</code> preference has no effect either.</p>
+
+<p><img src="https://metaredteam.github.io/public_comms_site/assets/images/Sandboxing_ImageIO/iOS_useServer.png" alt="&quot;Decompilation of iOS' useServer* function showing it is an empty stub, not yet implemented&quot;" /></p>
+
+<h4 id="update-as-of-nov-2023-ios-17">Update as of Nov 2023 (iOS 17):</h4>
+<p>As of iOS 17 we see this feature show up in code, however, it is gated behind <code class="language-plaintext highlighter-rouge">IIO_OSAppleInternalBuild()</code>.</p>
+
+<p><img src="https://metaredteam.github.io/public_comms_site/assets/images/Sandboxing_ImageIO/iOS17_internal_check.png" alt="&quot;Decompilation of iOS 17 showing implementation gated behind apple internal build check&quot;" /></p>
+
+<h2 id="conclusion">Conclusion</h2>
+
+<p>While this is an undocumented feature, setting the <code class="language-plaintext highlighter-rouge">IIOEnableOOP</code> preference true appears to correctly sandbox ImageIO on macOS and falls back gracefully to in-process parsing on iOS.</p>
+
+<p>Examining the image parsing code in ImageIOXPCService, it resembles the code found in ImageIO itself, and it imports the same libraries used for image parsing</p>
+
+<p>From our testing on macOS 13.5.1, we have not encountered issues with out-of-process parsing. We have not measured the performance impact, but if your application is not heavily reliant on images, enabling this feature is a meaningful security improvement.</p>
+
+
+
+    </div>
+
+</article>
+<div class="post-nav"><a class="previous" href="/public_comms_site/post-exploitation/2022/12/19/In-Memory-Execution-in-macOS.html" title="In-Memory Execution in macOS: the Old and the New">In-Memory Execution in macOS: the Old...</a><a class="next" href="/public_comms_site/mitigation/2023/09/12/CVE-2023-4039.html" title="CVE-2023-4039: GCC&#39;s -fstack-protector fails to guard dynamic stack allocations on ARM64">CVE-2023-4039: GCC&#39;s -fstack-protector fails to guard...</a></div><div class="post-related">
+      <div>Related Articles</div>
+      <ul>
+        <li class="">
+          <a class="post-link"
+            href="/public_comms_site/mitigation/2023/09/12/CVE-2023-4039.html"
+            title="CVE-2023-4039: GCC&#39;s -fstack-protector fails to guard dynamic stack allocations on ARM64">
+            CVE-2023-4039: GCC&#39;s -fstack-protector fails to guard dynamic stack allocations on ARM64<span class="post-badges">
+  <span class="post-badge badge-top">TOP</span>
+  <span class="post-badge badge-new">NEW</span>
+</span>
+</a>
+        </li><li class="">
+          <a class="post-link"
+            href="/public_comms_site/exploitation/2024/06/03/Android-Zygote-injection.html"
+            title="Becoming any Android app via Zygote command injection">
+            Becoming any Android app via Zygote command injection<span class="post-badges">
+  <span class="post-badge badge-top">TOP</span>
+  <span class="post-badge badge-new">NEW</span>
+</span>
+</a>
+        </li><li class="">
+          <a class="post-link"
+            href="/public_comms_site/exploitation/2024/01/30/Android-vendors-APEX-test-keys.html"
+            title="Missing signs: how several brands forgot to secure a key piece of Android">
+            Missing signs: how several brands forgot to secure a key piece of...<span class="post-badges">
+  <span class="post-badge badge-top">TOP</span>
+  <span class="post-badge badge-new">NEW</span>
+</span>
+</a>
+        </li><li class="">
+          <a class="post-link"
+            href="/public_comms_site/reference/2024/07/03/Android-system-apps.html"
+            title="The many meanings of &quot;system app&quot; in modern Android">
+            The many meanings of &quot;system app&quot; in modern Android<span class="post-badges">
+  <span class="post-badge badge-top">TOP</span>
+  <span class="post-badge badge-new">NEW</span>
+</span>
+</a>
+        </li></ul>
+    </div><div class="post-comments"></div></section>
+</div>
+
+
+  </section>
+  <section class="sidebar" style="margin-left: 15px;">
+    <!-- Get sidebar items --><style type="text/css" media="screen">
+.post-menu ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+</style>
+
+<div class="post-menu">
+  <div class="post-menu-title">TOC</div>
+  <div class="post-menu-content"></div>
+</div>
+
+<script>
+  function generateContent() {
+    var menu = document.querySelector(".post-menu");
+    var menuContent =  menu.querySelector(".post-menu-content");
+    var headings = document.querySelector(".post-content").querySelectorAll("h2, h3, h4, h5, h6");
+
+    // Hide menu when no headings
+    if (headings.length === 0) {
+      return menu.style.display = "none";
+    }
+
+    // Generate post menu
+    var menuHTML = '';
+    for (var i = 0; i < headings.length; i++) {
+      var h = headings[i];
+      menuHTML += (
+        '<li class="h-' + h.tagName.toLowerCase() + '">'
+        + '<a href="#h-' + h.getAttribute('id') + '">' + h.textContent + '</a></li>');
+    }
+
+    menuContent.innerHTML = '<ul>' + menuHTML + '</ul>';
+
+    // The header element
+    var header = document.querySelector('header.site-header');
+
+    function doMenuCollapse(index, over_items) {
+      var items = menuContent.firstChild.children;
+
+      if (over_items == undefined) {
+        over_items = 20;
+      }
+
+      if (items.length < over_items) {
+        return;
+      }
+
+      var activeItem = items[index];
+      var beginItem = activeItem
+      var endItem = activeItem
+      var beginIndex = index;
+      var endIndex = index + 1;
+      while (beginIndex >= 0
+        && !items[beginIndex].classList.contains('h-h2')) {
+        beginIndex -= 1;
+      }
+      while (endIndex < items.length
+        && !items[endIndex].classList.contains('h-h2')) {
+        endIndex += 1;
+      }
+      for (var i = 0; i < beginIndex; i++) {
+        item = items[i]
+        if (!item.classList.contains('h-h2')) {
+          item.style.display = 'none';
+        }
+      }
+      for (var i = beginIndex + 1; i < endIndex; i++) {
+        item = items[i]
+        // if (!item.classList.contains('h-h2')) {
+          item.style.display = '';
+        // }
+      }
+      for (var i = endIndex; i < items.length; i++) {
+        item = items[i]
+        if (!item.classList.contains('h-h2')) {
+          item.style.display = 'none';
+        }
+      }
+    }
+
+    // Init menu collapsed
+    doMenuCollapse(-1);
+
+    // Active the menu item
+    window.addEventListener('scroll', function (event) {
+      var lastActive = menuContent.querySelector('.active');
+      var changed = true;
+      var activeIndex = -1;
+      for (var i = headings.length - 1; i >= 0; i--) {
+        var h = headings[i];
+        var headingRect = h.getBoundingClientRect();
+        var headerRect = header.getBoundingClientRect();
+        var headerTop = Math.floor(headerRect.top);
+        var headerHeight = Math.floor(headerRect.height);
+        var headerHeight = headerTop + headerHeight + 20;
+        if (headingRect.top <= headerHeight) {
+          var id = 'h-' + h.getAttribute('id');
+          var a = menuContent.querySelector('a[href="#' + id  + '"]');
+          var curActive = a.parentNode;
+          if (curActive) {
+            curActive.classList.add('active');
+            activeIndex = i;
+          }
+          if (lastActive == curActive) {
+            changed = false;
+          }
+          break;
+        }
+      }
+      if (changed) {
+        if (lastActive) {
+          lastActive.classList.remove('active');
+        }
+        doMenuCollapse(activeIndex);
+      }
+      event.preventDefault();
+    });
+  }
+  generateContent();
+</script>
+</section>
+</div>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/public_comms_site/"></data>
+
+  <div class="wrapper">
+    <div class="site-footer-inner"><div>&copy; 2022-2026 Meta Red Team X</div>
+      <div>Powered by <a title="Jekyll is a simple, blog-aware, static site
+      generator." href="https://jekyllrb.com/">Jekyll</a> &amp; <a title="Yat, yet
+      another theme." href="https://github.com/jeffreytse/jekyll-theme-yat">Yat Theme</a>.</div>
+      <div class="footer-col rss-subscribe">Subscribe <a href="/public_comms_site/feed.xml">via RSS</a></div>
+    </div>
+  </div>
+</footer>
+</body>
+</html>
