@@ -11,21 +11,21 @@
 <meta property="og:locale" content="en_US" />
 <meta name="description" content="Technical writeups by Meta’s Security folks, including Red Team." />
 <meta property="og:description" content="Technical writeups by Meta’s Security folks, including Red Team." />
-<link rel="canonical" href="https://metaredteam.github.io/public_comms_site/mitigation/2023/09/11/Sandboxing-ImageIO-in-macOS.html" />
-<meta property="og:url" content="https://metaredteam.github.io/public_comms_site/mitigation/2023/09/11/Sandboxing-ImageIO-in-macOS.html" />
+<link rel="canonical" href="https://rtx.meta.security/mitigation/2023/09/11/Sandboxing-ImageIO-in-macOS.html" />
+<meta property="og:url" content="https://rtx.meta.security/mitigation/2023/09/11/Sandboxing-ImageIO-in-macOS.html" />
 <meta property="og:site_name" content="Meta Red Team X" />
 <meta property="og:type" content="article" />
 <meta property="article:published_time" content="2023-09-11T00:00:00-05:00" />
 <meta name="twitter:card" content="summary" />
 <meta property="twitter:title" content="Sandboxing ImageIO media parsing in macOS" />
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Nik Tsytsarkin, Red Team X"},"dateModified":"2023-09-11T00:00:00-05:00","datePublished":"2023-09-11T00:00:00-05:00","description":"Technical writeups by Meta’s Security folks, including Red Team.","headline":"Sandboxing ImageIO media parsing in macOS","mainEntityOfPage":{"@type":"WebPage","@id":"https://metaredteam.github.io/public_comms_site/mitigation/2023/09/11/Sandboxing-ImageIO-in-macOS.html"},"url":"https://metaredteam.github.io/public_comms_site/mitigation/2023/09/11/Sandboxing-ImageIO-in-macOS.html"}</script>
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Nik Tsytsarkin, Red Team X"},"dateModified":"2023-09-11T00:00:00-05:00","datePublished":"2023-09-11T00:00:00-05:00","description":"Technical writeups by Meta’s Security folks, including Red Team.","headline":"Sandboxing ImageIO media parsing in macOS","mainEntityOfPage":{"@type":"WebPage","@id":"https://rtx.meta.security/mitigation/2023/09/11/Sandboxing-ImageIO-in-macOS.html"},"url":"https://rtx.meta.security/mitigation/2023/09/11/Sandboxing-ImageIO-in-macOS.html"}</script>
 <!-- End Jekyll SEO tag -->
 <link rel="icon" href="">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/typeface-noto-sans@0.0.72/index.min.css">
-  <link rel="stylesheet" href="/public_comms_site/assets/css/main.css">
-  <script src="/public_comms_site/assets/js/main.js"></script><link type="application/atom+xml" rel="alternate" href="https://metaredteam.github.io/public_comms_site/feed.xml" title="Meta Red Team X" /><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/default.min.css">
+  <link rel="stylesheet" href="/assets/css/main.css">
+  <script src="/assets/js/main.js"></script><link type="application/atom+xml" rel="alternate" href="https://rtx.meta.security/feed.xml" title="Meta Red Team X" /><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/default.min.css">
 <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js"></script>
 <!-- and it's easy to individually load additional languages -->
 <script charset="UTF-8"
@@ -199,7 +199,7 @@ document.addEventListener('DOMContentLoaded', function(event) {
 
   window.addEventListener("load", initPhotoSwipe);
 </script>
-  <link rel="stylesheet" href="/public_comms_site/assets/css/rtx.css">
+  <link rel="stylesheet" href="/assets/css/rtx.css">
 </head>
 <body>
 
@@ -328,7 +328,7 @@ document.addEventListener('DOMContentLoaded', function(event) {
 <header class="site-header " role="banner">
 
   <div class="wrapper">
-    <div class="site-header-inner"><span class="site-brand"><a class="site-brand-inner" rel="author" href="/public_comms_site/">
+    <div class="site-header-inner"><span class="site-brand"><a class="site-brand-inner" rel="author" href="/">
   <img class="site-favicon" title="Meta Red Team X" src="" onerror="this.style.display='none'">
   Meta Red Team X
 </a>
@@ -342,7 +342,7 @@ document.addEventListener('DOMContentLoaded', function(event) {
             </span>
           </label>
 
-          <div class="trigger"><a class="page-link" href="/public_comms_site/bugs.html">BUGS</a><a class="page-link" href="/public_comms_site/about.html">ABOUT</a><a class="page-link" href="/public_comms_site/">HOME</a>
+          <div class="trigger"><a class="page-link" href="/bugs.html">BUGS</a><a class="page-link" href="/about.html">ABOUT</a><a class="page-link" href="/">HOME</a>
 
 
 
@@ -777,7 +777,7 @@ document.addEventListener('DOMContentLoaded', function(event) {
 
 <p>Additionally, both ImageIO and XPCService import libraries like libPNG, libJPEG, etc., suggesting that they share the same capabilities to parse these formats. The list of imports for ImageIO (left) and ImageIOXPCService (right) is provided below:</p>
 
-<p><img src="https://metaredteam.github.io/public_comms_site/assets/images/Sandboxing_ImageIO/symbol_trees.png" alt="&quot;Symbol trees showing ImageIO exports on the left and ImageIOXPCService on the right, listings are identical&quot;" /></p>
+<p><img src="https://rtx.meta.security/assets/images/Sandboxing_ImageIO/symbol_trees.png" alt="&quot;Symbol trees showing ImageIO exports on the left and ImageIOXPCService on the right, listings are identical&quot;" /></p>
 
 <p>The sandbox config for ImageIOXPCService is located at <code class="language-plaintext highlighter-rouge">/System/Library/Sandbox/Profiles/com.apple.ImageIOXPCService.sb</code>.</p>
 
@@ -798,17 +798,17 @@ document.addEventListener('DOMContentLoaded', function(event) {
 
 <p>The following code snippet shows <code class="language-plaintext highlighter-rouge">IIO_ReaderHandler::readerForBytes</code> initializing an XPC client before deciding whether to use an XPC server (out-of-process) or not (in-process) for parsing image header data. This pattern repeats when reader plugins prepare to parse image contents.</p>
 
-<p><img src="https://metaredteam.github.io/public_comms_site/assets/images/Sandboxing_ImageIO/XPC_decision.png" alt="&quot;Reader plugin initializing an XPC client before deciding whether to use the XPC server or do parsing in-proc&quot;" /></p>
+<p><img src="https://rtx.meta.security/assets/images/Sandboxing_ImageIO/XPC_decision.png" alt="&quot;Reader plugin initializing an XPC client before deciding whether to use the XPC server or do parsing in-proc&quot;" /></p>
 
 <h2 id="in-proc-or-out-of-proc">In-Proc or Out-of-Proc?</h2>
 
 <p>We have determined that ImageIO is capable of parsing media both in-process and out-of-process. However, the question remains: how does the library decide where to parse an image? There exists a set of functions beginning with “<code class="language-plaintext highlighter-rouge">useServerFor*</code>” which determines whether the library will use a remote XPC server (out-of-process) for a specific task.</p>
 
-<p><img src="https://metaredteam.github.io/public_comms_site/assets/images/Sandboxing_ImageIO/useServer_funcs.png" alt="&quot;Listing of various useServer* functions that decide whether the sandbox is enabled for different parsing stages&quot;" /></p>
+<p><img src="https://rtx.meta.security/assets/images/Sandboxing_ImageIO/useServer_funcs.png" alt="&quot;Listing of various useServer* functions that decide whether the sandbox is enabled for different parsing stages&quot;" /></p>
 
 <p>Let’s examine <code class="language-plaintext highlighter-rouge">IIOXPCClient::useServerForIdentification</code>, which determines whether header parsing will be performed locally or in a sandbox. Other <code class="language-plaintext highlighter-rouge">useServerFor*</code> functions are similar:</p>
 
-<p><img src="https://metaredteam.github.io/public_comms_site/assets/images/Sandboxing_ImageIO/macOS_useServer.png" alt="&quot;Ghidra decompilation of macOS' useServerForIdentification method, which is similar to the other useServer* funcs&quot;" /></p>
+<p><img src="https://rtx.meta.security/assets/images/Sandboxing_ImageIO/macOS_useServer.png" alt="&quot;Ghidra decompilation of macOS' useServerForIdentification method, which is similar to the other useServer* funcs&quot;" /></p>
 
 <p>In our experience, <code class="language-plaintext highlighter-rouge">param_1</code> is always <code class="language-plaintext highlighter-rouge">0xffffffff</code>, and the deciding factor is the byte at an offset of 0x24. By default, the byte at this offset was set, which caused <code class="language-plaintext highlighter-rouge">useServerForIdentification</code> to return false and made all parsing in-process on macOS.</p>
 
@@ -816,15 +816,15 @@ document.addEventListener('DOMContentLoaded', function(event) {
 
 <p>Modifying this byte in the debugger forced out-of-process parsing, causing ImageIOXPCService to appear in the Activity Monitor. Success!</p>
 
-<p><img src="https://metaredteam.github.io/public_comms_site/assets/images/Sandboxing_ImageIO/ActivityMonitor.png" alt="&quot;macOS' Activity Monitor showing the ImageIOXPCService process running, proving ImageIO is sandboxed&quot;" /></p>
+<p><img src="https://rtx.meta.security/assets/images/Sandboxing_ImageIO/ActivityMonitor.png" alt="&quot;macOS' Activity Monitor showing the ImageIOXPCService process running, proving ImageIO is sandboxed&quot;" /></p>
 
 <p>Tracing what initialized that byte, we discovered <code class="language-plaintext highlighter-rouge">IIOXPCClient_block_invoke</code>:</p>
 
-<p><img src="https://metaredteam.github.io/public_comms_site/assets/images/Sandboxing_ImageIO/block_invoke.png" alt="&quot;The block_invoke function's decompilation, showing where the IOPreference is fetched&quot;" /></p>
+<p><img src="https://rtx.meta.security/assets/images/Sandboxing_ImageIO/block_invoke.png" alt="&quot;The block_invoke function's decompilation, showing where the IOPreference is fetched&quot;" /></p>
 
 <p>It sets the value at offset 0x24 into <code class="language-plaintext highlighter-rouge">IIOXPCClientObject</code> based on the <code class="language-plaintext highlighter-rouge">IIOEnableOOP</code> preference. Let’s take a look at how it works:</p>
 
-<p><img src="https://metaredteam.github.io/public_comms_site/assets/images/Sandboxing_ImageIO/IOPreferencesGetBoolean.png" alt="&quot;IOPreferences GetBoolean internals, decompilation showing how it first looks for an env var then pulls from CFPreferences&quot;" /></p>
+<p><img src="https://rtx.meta.security/assets/images/Sandboxing_ImageIO/IOPreferencesGetBoolean.png" alt="&quot;IOPreferences GetBoolean internals, decompilation showing how it first looks for an env var then pulls from CFPreferences&quot;" /></p>
 
 <p>First, it checks if an environment variable called <code class="language-plaintext highlighter-rouge">IIOEnableOOP</code> is set. If so, this takes precedence over any other preference. We can test our application by setting <code class="language-plaintext highlighter-rouge">IIOEnableOOP=YES</code> to verify that parsing is now occurring out-of-process.</p>
 
@@ -841,12 +841,12 @@ document.addEventListener('DOMContentLoaded', function(event) {
 
 <p>Unfortunately, this does not work on iOS. The ImageIOXPCService binary is not present on iOS, and we can see that the <code class="language-plaintext highlighter-rouge">useServerForIdentification</code> function body is <code class="language-plaintext highlighter-rouge">#ifdef</code>’d blank. The <code class="language-plaintext highlighter-rouge">IIOEnableOOP</code> preference has no effect either.</p>
 
-<p><img src="https://metaredteam.github.io/public_comms_site/assets/images/Sandboxing_ImageIO/iOS_useServer.png" alt="&quot;Decompilation of iOS' useServer* function showing it is an empty stub, not yet implemented&quot;" /></p>
+<p><img src="https://rtx.meta.security/assets/images/Sandboxing_ImageIO/iOS_useServer.png" alt="&quot;Decompilation of iOS' useServer* function showing it is an empty stub, not yet implemented&quot;" /></p>
 
 <h4 id="update-as-of-nov-2023-ios-17">Update as of Nov 2023 (iOS 17):</h4>
 <p>As of iOS 17 we see this feature show up in code, however, it is gated behind <code class="language-plaintext highlighter-rouge">IIO_OSAppleInternalBuild()</code>.</p>
 
-<p><img src="https://metaredteam.github.io/public_comms_site/assets/images/Sandboxing_ImageIO/iOS17_internal_check.png" alt="&quot;Decompilation of iOS 17 showing implementation gated behind apple internal build check&quot;" /></p>
+<p><img src="https://rtx.meta.security/assets/images/Sandboxing_ImageIO/iOS17_internal_check.png" alt="&quot;Decompilation of iOS 17 showing implementation gated behind apple internal build check&quot;" /></p>
 
 <h2 id="conclusion">Conclusion</h2>
 
@@ -861,12 +861,12 @@ document.addEventListener('DOMContentLoaded', function(event) {
     </div>
 
 </article>
-<div class="post-nav"><a class="previous" href="/public_comms_site/post-exploitation/2022/12/19/In-Memory-Execution-in-macOS.html" title="In-Memory Execution in macOS: the Old and the New">In-Memory Execution in macOS: the Old...</a><a class="next" href="/public_comms_site/mitigation/2023/09/12/CVE-2023-4039.html" title="CVE-2023-4039: GCC&#39;s -fstack-protector fails to guard dynamic stack allocations on ARM64">CVE-2023-4039: GCC&#39;s -fstack-protector fails to guard...</a></div><div class="post-related">
+<div class="post-nav"><a class="previous" href="/post-exploitation/2022/12/19/In-Memory-Execution-in-macOS.html" title="In-Memory Execution in macOS: the Old and the New">In-Memory Execution in macOS: the Old...</a><a class="next" href="/mitigation/2023/09/12/CVE-2023-4039.html" title="CVE-2023-4039: GCC&#39;s -fstack-protector fails to guard dynamic stack allocations on ARM64">CVE-2023-4039: GCC&#39;s -fstack-protector fails to guard...</a></div><div class="post-related">
       <div>Related Articles</div>
       <ul>
         <li class="">
           <a class="post-link"
-            href="/public_comms_site/mitigation/2023/09/12/CVE-2023-4039.html"
+            href="/mitigation/2023/09/12/CVE-2023-4039.html"
             title="CVE-2023-4039: GCC&#39;s -fstack-protector fails to guard dynamic stack allocations on ARM64">
             CVE-2023-4039: GCC&#39;s -fstack-protector fails to guard dynamic stack allocations on ARM64<span class="post-badges">
   <span class="post-badge badge-top">TOP</span>
@@ -875,7 +875,7 @@ document.addEventListener('DOMContentLoaded', function(event) {
 </a>
         </li><li class="">
           <a class="post-link"
-            href="/public_comms_site/exploitation/2024/06/03/Android-Zygote-injection.html"
+            href="/exploitation/2024/06/03/Android-Zygote-injection.html"
             title="Becoming any Android app via Zygote command injection">
             Becoming any Android app via Zygote command injection<span class="post-badges">
   <span class="post-badge badge-top">TOP</span>
@@ -884,7 +884,7 @@ document.addEventListener('DOMContentLoaded', function(event) {
 </a>
         </li><li class="">
           <a class="post-link"
-            href="/public_comms_site/exploitation/2024/01/30/Android-vendors-APEX-test-keys.html"
+            href="/exploitation/2024/01/30/Android-vendors-APEX-test-keys.html"
             title="Missing signs: how several brands forgot to secure a key piece of Android">
             Missing signs: how several brands forgot to secure a key piece of...<span class="post-badges">
   <span class="post-badge badge-top">TOP</span>
@@ -893,7 +893,7 @@ document.addEventListener('DOMContentLoaded', function(event) {
 </a>
         </li><li class="">
           <a class="post-link"
-            href="/public_comms_site/reference/2024/07/03/Android-system-apps.html"
+            href="/reference/2024/07/03/Android-system-apps.html"
             title="The many meanings of &quot;system app&quot; in modern Android">
             The many meanings of &quot;system app&quot; in modern Android<span class="post-badges">
   <span class="post-badge badge-top">TOP</span>
@@ -1034,14 +1034,14 @@ document.addEventListener('DOMContentLoaded', function(event) {
 
       </div>
     </main><footer class="site-footer h-card">
-  <data class="u-url" href="/public_comms_site/"></data>
+  <data class="u-url" href="/"></data>
 
   <div class="wrapper">
     <div class="site-footer-inner"><div>&copy; 2022-2026 Meta Red Team X</div>
       <div>Powered by <a title="Jekyll is a simple, blog-aware, static site
       generator." href="https://jekyllrb.com/">Jekyll</a> &amp; <a title="Yat, yet
       another theme." href="https://github.com/jeffreytse/jekyll-theme-yat">Yat Theme</a>.</div>
-      <div class="footer-col rss-subscribe">Subscribe <a href="/public_comms_site/feed.xml">via RSS</a></div>
+      <div class="footer-col rss-subscribe">Subscribe <a href="/feed.xml">via RSS</a></div>
     </div>
   </div>
 </footer>

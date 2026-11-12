@@ -1,1 +1,1 @@
-Sitemap: https://metaredteam.github.io/public_comms_site/sitemap.xml
+Sitemap: https://rtx.meta.security/sitemap.xml

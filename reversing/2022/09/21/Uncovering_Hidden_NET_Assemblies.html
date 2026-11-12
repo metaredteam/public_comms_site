@@ -11,21 +11,21 @@
 <meta property="og:locale" content="en_US" />
 <meta name="description" content="Technical writeups by Meta’s Security folks, including Red Team." />
 <meta property="og:description" content="Technical writeups by Meta’s Security folks, including Red Team." />
-<link rel="canonical" href="https://metaredteam.github.io/public_comms_site/reversing/2022/09/21/Uncovering_Hidden_NET_Assemblies.html" />
-<meta property="og:url" content="https://metaredteam.github.io/public_comms_site/reversing/2022/09/21/Uncovering_Hidden_NET_Assemblies.html" />
+<link rel="canonical" href="https://rtx.meta.security/reversing/2022/09/21/Uncovering_Hidden_NET_Assemblies.html" />
+<meta property="og:url" content="https://rtx.meta.security/reversing/2022/09/21/Uncovering_Hidden_NET_Assemblies.html" />
 <meta property="og:site_name" content="Meta Red Team X" />
 <meta property="og:type" content="article" />
 <meta property="article:published_time" content="2022-09-21T00:00:00-05:00" />
 <meta name="twitter:card" content="summary" />
 <meta property="twitter:title" content="Uncovering Hidden .NET Assemblies" />
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Michael Henry, Red Team X"},"dateModified":"2022-09-21T00:00:00-05:00","datePublished":"2022-09-21T00:00:00-05:00","description":"Technical writeups by Meta’s Security folks, including Red Team.","headline":"Uncovering Hidden .NET Assemblies","mainEntityOfPage":{"@type":"WebPage","@id":"https://metaredteam.github.io/public_comms_site/reversing/2022/09/21/Uncovering_Hidden_NET_Assemblies.html"},"url":"https://metaredteam.github.io/public_comms_site/reversing/2022/09/21/Uncovering_Hidden_NET_Assemblies.html"}</script>
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Michael Henry, Red Team X"},"dateModified":"2022-09-21T00:00:00-05:00","datePublished":"2022-09-21T00:00:00-05:00","description":"Technical writeups by Meta’s Security folks, including Red Team.","headline":"Uncovering Hidden .NET Assemblies","mainEntityOfPage":{"@type":"WebPage","@id":"https://rtx.meta.security/reversing/2022/09/21/Uncovering_Hidden_NET_Assemblies.html"},"url":"https://rtx.meta.security/reversing/2022/09/21/Uncovering_Hidden_NET_Assemblies.html"}</script>
 <!-- End Jekyll SEO tag -->
 <link rel="icon" href="">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/typeface-noto-sans@0.0.72/index.min.css">
-  <link rel="stylesheet" href="/public_comms_site/assets/css/main.css">
-  <script src="/public_comms_site/assets/js/main.js"></script><link type="application/atom+xml" rel="alternate" href="https://metaredteam.github.io/public_comms_site/feed.xml" title="Meta Red Team X" /><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/default.min.css">
+  <link rel="stylesheet" href="/assets/css/main.css">
+  <script src="/assets/js/main.js"></script><link type="application/atom+xml" rel="alternate" href="https://rtx.meta.security/feed.xml" title="Meta Red Team X" /><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/default.min.css">
 <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js"></script>
 <!-- and it's easy to individually load additional languages -->
 <script charset="UTF-8"
@@ -199,7 +199,7 @@ document.addEventListener('DOMContentLoaded', function(event) {
 
   window.addEventListener("load", initPhotoSwipe);
 </script>
-  <link rel="stylesheet" href="/public_comms_site/assets/css/rtx.css">
+  <link rel="stylesheet" href="/assets/css/rtx.css">
 </head>
 <body>
 
@@ -328,7 +328,7 @@ document.addEventListener('DOMContentLoaded', function(event) {
 <header class="site-header " role="banner">
 
   <div class="wrapper">
-    <div class="site-header-inner"><span class="site-brand"><a class="site-brand-inner" rel="author" href="/public_comms_site/">
+    <div class="site-header-inner"><span class="site-brand"><a class="site-brand-inner" rel="author" href="/">
   <img class="site-favicon" title="Meta Red Team X" src="" onerror="this.style.display='none'">
   Meta Red Team X
 </a>
@@ -342,7 +342,7 @@ document.addEventListener('DOMContentLoaded', function(event) {
             </span>
           </label>
 
-          <div class="trigger"><a class="page-link" href="/public_comms_site/bugs.html">BUGS</a><a class="page-link" href="/public_comms_site/about.html">ABOUT</a><a class="page-link" href="/public_comms_site/">HOME</a>
+          <div class="trigger"><a class="page-link" href="/bugs.html">BUGS</a><a class="page-link" href="/about.html">ABOUT</a><a class="page-link" href="/">HOME</a>
 
 
 
@@ -763,11 +763,11 @@ document.addEventListener('DOMContentLoaded', function(event) {
 
 <p>The ControlUp Agent (cuAgent) software is written in .NET. This is ideal for reverse engineering – .NET usually decompiles to nearly the same thing that the developer initially wrote. But we noticed something strange with the Smart-X ControlUp binaries. Firstly, there weren’t a lot of .NET assembly DLLs that came along with the project. That’s not strange by itself, but often .NET binaries come with a lot of extra DLLs. Looking in Process Explorer shows that there are many loaded assemblies – but we weren’t able to find them in DotPeek or on disk.</p>
 
-<p><img src="https://metaredteam.github.io/public_comms_site/assets/images/NET_Assemblies/cuAgent_properties.png" alt="&quot;Process Explorer showing loaded Assemblies in cuAgent.exe&quot;" /></p>
+<p><img src="https://rtx.meta.security/assets/images/NET_Assemblies/cuAgent_properties.png" alt="&quot;Process Explorer showing loaded Assemblies in cuAgent.exe&quot;" /></p>
 
 <p>They also use some sort of obfuscation. Class, method, and variable names look like this:</p>
 
-<p><img src="https://metaredteam.github.io/public_comms_site/assets/images/NET_Assemblies/obfuscation.png" alt="&quot;Obfuscated .NET method&quot;" /></p>
+<p><img src="https://rtx.meta.security/assets/images/NET_Assemblies/obfuscation.png" alt="&quot;Obfuscated .NET method&quot;" /></p>
 
 <p>Not only do they have odd class, variable, and method names – they have a lot of dead code. Note that the case 0: on line 337 will never execute. It looks like obfuscation to slow down a reverser. Also a lot of “if (false)” statements are littered throughout the code.</p>
 
@@ -775,7 +775,7 @@ document.addEventListener('DOMContentLoaded', function(event) {
 
 <p>Reviewing more code, we stumbled across this:</p>
 
-<p><img src="https://metaredteam.github.io/public_comms_site/assets/images/NET_Assemblies/chararray.png" alt="&quot;Suspicious charArray&quot;" /></p>
+<p><img src="https://rtx.meta.security/assets/images/NET_Assemblies/chararray.png" alt="&quot;Suspicious charArray&quot;" /></p>
 
 <p>That seemed odd, so I spent a bit of time reversing what is going on. That charArray gets bitwise inverted. At that point, it is more readable:</p>
 
@@ -788,7 +788,7 @@ Culture=neutral, PublicKeyToken=null`nZLN7WTbcAXIfmox4Owtnw==`...
 
 <p>Reversing more of the code shows they’re getting the manifest resource stream based on the base64 name and passing it to a new function.</p>
 
-<p><img src="https://metaredteam.github.io/public_comms_site/assets/images/NET_Assemblies/des.png" alt="&quot;Reversed code showing DES being used&quot;" /></p>
+<p><img src="https://rtx.meta.security/assets/images/NET_Assemblies/des.png" alt="&quot;Reversed code showing DES being used&quot;" /></p>
 
 <p>In this next function, they read and ignore the first 3 bytes of the stream. They read the 4th byte as a flag byte. The decoded bits of the flag are:</p>
 
@@ -803,11 +803,11 @@ Culture=neutral, PublicKeyToken=null`nZLN7WTbcAXIfmox4Owtnw==`...
 
 <p>In the encrypted case, the next 8 bytes in the resource stream are the IV and the following 8 bytes are the key:</p>
 
-<p><img src="https://metaredteam.github.io/public_comms_site/assets/images/NET_Assemblies/desdecrypt.png" alt="&quot;Reversed code showing DES decryption function and where key + IV are found&quot;" /></p>
+<p><img src="https://rtx.meta.security/assets/images/NET_Assemblies/desdecrypt.png" alt="&quot;Reversed code showing DES decryption function and where key + IV are found&quot;" /></p>
 
 <p>So we now have everything we need to retrieve all the assemblies from the executables and write them to files. Once we write them to a file, we can load them in DotPeek and keep working:</p>
 
-<p><img src="https://metaredteam.github.io/public_comms_site/assets/images/NET_Assemblies/dotpeek.png" alt="&quot;DotPeek showing decrypted assemblies&quot;" /></p>
+<p><img src="https://rtx.meta.security/assets/images/NET_Assemblies/dotpeek.png" alt="&quot;DotPeek showing decrypted assemblies&quot;" /></p>
 
 <p>In the end, we were able to recover 156 additional assemblies across 3 obfuscated service binaries. We ended up finding the named pipe and TCP WCF handlers, as well.</p>
 
@@ -819,7 +819,7 @@ Culture=neutral, PublicKeyToken=null`nZLN7WTbcAXIfmox4Owtnw==`...
 
 <p>Running the PoC shows that we can connect to a socket, send it some packets, and get it to execute code for us as <code class="language-plaintext highlighter-rouge">NT AUTHORITY\SYSTEM</code>:</p>
 
-<p><img src="https://metaredteam.github.io/public_comms_site/assets/images/NET_Assemblies/poc.png" alt="&quot;PoC works, showing execution as SYSTEM&quot;" /></p>
+<p><img src="https://rtx.meta.security/assets/images/NET_Assemblies/poc.png" alt="&quot;PoC works, showing execution as SYSTEM&quot;" /></p>
 
 <p>More detail, including the PoC, can be found in <a href="https://github.com/metaredteam/external-disclosures/security/advisories/GHSA-vmc4-wm3f-w3fr">our advisory</a>. The code that I used to do the de-obfuscation is included here:</p>
 
@@ -978,12 +978,12 @@ namespace StringArrayReverser
     </div>
 
 </article>
-<div class="post-nav"><span></span><a class="next" href="/public_comms_site/post-exploitation/2022/12/19/In-Memory-Execution-in-macOS.html" title="In-Memory Execution in macOS: the Old and the New">In-Memory Execution in macOS: the Old...</a></div><div class="post-related">
+<div class="post-nav"><span></span><a class="next" href="/post-exploitation/2022/12/19/In-Memory-Execution-in-macOS.html" title="In-Memory Execution in macOS: the Old and the New">In-Memory Execution in macOS: the Old...</a></div><div class="post-related">
       <div>Related Articles</div>
       <ul>
         <li class="">
           <a class="post-link"
-            href="/public_comms_site/post-exploitation/2022/12/19/In-Memory-Execution-in-macOS.html"
+            href="/post-exploitation/2022/12/19/In-Memory-Execution-in-macOS.html"
             title="In-Memory Execution in macOS: the Old and the New">
             In-Memory Execution in macOS: the Old and the New<span class="post-badges">
   <span class="post-badge badge-top">TOP</span>
@@ -992,7 +992,7 @@ namespace StringArrayReverser
 </a>
         </li><li class="">
           <a class="post-link"
-            href="/public_comms_site/exploitation/2024/06/03/Android-Zygote-injection.html"
+            href="/exploitation/2024/06/03/Android-Zygote-injection.html"
             title="Becoming any Android app via Zygote command injection">
             Becoming any Android app via Zygote command injection<span class="post-badges">
   <span class="post-badge badge-top">TOP</span>
@@ -1001,7 +1001,7 @@ namespace StringArrayReverser
 </a>
         </li><li class="">
           <a class="post-link"
-            href="/public_comms_site/exploitation/2024/03/04/Android-run-as-forgery.html"
+            href="/exploitation/2024/03/04/Android-run-as-forgery.html"
             title="Bypassing the &quot;run-as&quot; debuggability check on Android via newline injection">
             Bypassing the &quot;run-as&quot; debuggability check on Android via newline injection<span class="post-badges">
   <span class="post-badge badge-top">TOP</span>
@@ -1010,7 +1010,7 @@ namespace StringArrayReverser
 </a>
         </li><li class="">
           <a class="post-link"
-            href="/public_comms_site/reversing/2022/09/21/Uncovering_Hidden_NET_Assemblies.html"
+            href="/reversing/2022/09/21/Uncovering_Hidden_NET_Assemblies.html"
             title="Uncovering Hidden .NET Assemblies">
             Uncovering Hidden .NET Assemblies<span class="post-badges">
   <span class="post-badge badge-top">TOP</span>
@@ -1151,14 +1151,14 @@ namespace StringArrayReverser
 
       </div>
     </main><footer class="site-footer h-card">
-  <data class="u-url" href="/public_comms_site/"></data>
+  <data class="u-url" href="/"></data>
 
   <div class="wrapper">
     <div class="site-footer-inner"><div>&copy; 2022-2026 Meta Red Team X</div>
       <div>Powered by <a title="Jekyll is a simple, blog-aware, static site
       generator." href="https://jekyllrb.com/">Jekyll</a> &amp; <a title="Yat, yet
       another theme." href="https://github.com/jeffreytse/jekyll-theme-yat">Yat Theme</a>.</div>
-      <div class="footer-col rss-subscribe">Subscribe <a href="/public_comms_site/feed.xml">via RSS</a></div>
+      <div class="footer-col rss-subscribe">Subscribe <a href="/feed.xml">via RSS</a></div>
     </div>
   </div>
 </footer>
